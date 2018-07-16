@@ -180,7 +180,7 @@ class Main
   def show_visited_stations_for_train
     train = ask_user_to_select(:train)
     station_history = train.station_history
-    if station_history
+    if station_history && station_history != []
       puts train.station_history
     else
       puts 'Train has not visited any station'

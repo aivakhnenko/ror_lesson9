@@ -27,16 +27,15 @@ module Validation
 
     def validate!
       validations = self.class.instance_variable_get(:@validations)
-      if validations
-        validations.each do |validation|
-          name = validation[:name]
-          full_name = "#{self.class} #{name}"
-          value = instance_variable_get("@#{name}".to_sym)
-          case validation[:validation]
-          when :presence then raise "#{full_name} has to exist"     if !value || value == ''
-          when :type     then raise "#{full_name} has wrong type"   if value.class != validation[:type]
-          when :format   then raise "#{full_name} has wrong format" if value !~ validation[:format]
-          end
+      return true unless validations
+      validations.each do |validation|
+        name = validation[:name]
+        full_name = "#{self.class} #{name}"
+        value = instance_variable_get("@#{name}".to_sym)
+        case validation[:validation]
+        when :presence then raise "#{full_name} has to exist"     if !value || value == ''
+        when :type     then raise "#{full_name} has wrong type"   if value.class != validation[:type]
+        when :format   then raise "#{full_name} has wrong format" if value !~ validation[:format]
         end
       end
       true
