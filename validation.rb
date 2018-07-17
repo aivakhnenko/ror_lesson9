@@ -5,16 +5,14 @@ module Validation
   end
 
   module ClassMethods
-    def validate(name, validation, *args)
-      validations_name = :@validations
-      instance_variable_set(validations_name, []) unless instance_variable_get(validations_name)
-      validations = instance_variable_get(validations_name)
-      case validation
-      when :presence then validations << { name: name, validation: validation }
-      when :type     then validations << { name: name, validation: validation, type:   args[0] }
-      when :format   then validations << { name: name, validation: validation, format: args[0] }
-      end
-      instance_variable_set(validations_name, validations)
+    VALIDATIONS_NAME = :@validations
+
+    def validate(attr_name, validation_type, *args)
+      validations = instance_variable_get(VALIDATIONS_NAME)
+      validations ||= {}
+      validations[attr_name] ||= {}
+      validations[attr_name][validation_type] = args
+      instance_variable_set(VALIDATIONS_NAME, validations)
     end
   end
 
@@ -26,19 +24,30 @@ module Validation
     end
 
     def validate!
-      validations = self.class.instance_variable_get(:@validations)
-      return true unless validations
-      validations.each do |validation|
-        name = validation[:name]
-        full_name = "#{self.class} #{name}"
-        value = instance_variable_get("@#{name}".to_sym)
-        case validation[:validation]
-        when :presence then raise "#{full_name} has to exist"     if !value || value == ''
-        when :type     then raise "#{full_name} has wrong type"   if value.class != validation[:type]
-        when :format   then raise "#{full_name} has wrong format" if value !~ validation[:format]
+      validations = self.class.instance_variable_get(ClassMethods::VALIDATIONS_NAME)
+      validations ||= {}
+      validations.each do |attr_name, attr_validations|
+        full_attr_name = "#{self.class} #{attr_name}"
+        attr_validations.each do |validation_type, args|
+          attr_value = instance_variable_get("@#{attr_name}".to_sym)
+          send("validate_#{validation_type}".to_sym, full_attr_name, attr_value, args)
         end
       end
       true
+    end
+
+    private
+
+    def validate_presence(full_attr_name, attr_value, _args)
+      raise "#{full_attr_name} has to exist" if !attr_value || attr_value == ''
+    end
+
+    def validate_type(full_attr_name, attr_value, args)
+      raise "#{full_attr_name} has wrong type" if attr_value.class != args[0]
+    end
+
+    def validate_format(full_attr_name, attr_value, args)
+      raise "#{full_attr_name} has wrong format" if attr_value !~ args[0]
     end
   end
 end
